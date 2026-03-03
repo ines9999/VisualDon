@@ -26,19 +26,22 @@ Les données sont stockées dans un fichier JSON et un CSV.
 ## But
 On veut raconter l'été suisse comme un voyage. L'idée c'est de montrer 
 qu'il se passe quelque chose chaque week-end, dans toute la Suisse, 
-pour tous les goûts — du jazz au hip-hop en passant par la techno.
+pour tous les goûts du jazz au hip-hop en passant par la techno.
  
 L'approche est à la fois exploratoire (découvrir la carte des festivals) 
 et explicative (guider le lecteur dans un récit chronologique de juin à août).
  
 ## Références
-  **liste de festivlas 
+  ## liste de festivlas 
  - SBB : https://news.sbb.ch/fr/article/135979/les-festivals-2025-en-suisse-qu-est-ce-qui-se-passe-et-ou?.com 
  - Swiss reporting : https://swissreporting.com/what-are-the-trendiest-clubs-and-festivals-in-switzerland-in-2025.com
  - Route des festivals : https://www.routedesfestivals.com/liste-des-festivals-pour-suisse-3.html 
 
-  ** pour l'inspiration sur les storytelling avec des données
-- The Pudding : https://pudding.cool/ 
+  ## pour l'inspiration sur les storytelling avec des données
+- The Pudding
+-  https://pudding.cool/2026/02/happy-map/
+-  https://pudding.cool/2024/09/courts/
+-  https://pudding.cool/2018/11/boy-bands/
 
-  ** données historiques sur les festivals
+  ## données historiques sur les festivals
 - Wikipedia

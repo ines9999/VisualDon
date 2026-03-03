@@ -1,6 +1,5 @@
-# VisualDon
-# Un été en Suisse 
-Visualisation interactive des festivals de musique suisses durant l'été 2025.
+# VisualDon - Un été en Suisse 
+Sitw web : Visualisation interactive des festivals de musique suisses durant l'été 2025.
  
 ## Contexte
 Les données viennent des sites officiels des festivals (Paléo, Street Parade, 

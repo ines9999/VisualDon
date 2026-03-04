@@ -48,3 +48,8 @@ et explicative (guider le lecteur dans un récit chronologique de juin à août)
 
   ## données historiques sur les festivals
 - Wikipedia
+- https://fr.wikipedia.org/wiki/Pal%C3%A9o_Festival_Nyon
+- https://fr.wikipedia.org/wiki/Festi%27neuch
+- https://fr.wikipedia.org/wiki/Openair_Frauenfeld
+- https://fr.wikipedia.org/wiki/Montreux_Jazz_Festival
+- https://fr.wikipedia.org/wiki/Caribana_Festival_de_Crans

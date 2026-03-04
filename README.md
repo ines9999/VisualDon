@@ -42,6 +42,9 @@ et explicative (guider le lecteur dans un récit chronologique de juin à août)
 -  https://pudding.cool/2026/02/happy-map/
 -  https://pudding.cool/2024/09/courts/
 -  https://pudding.cool/2018/11/boy-bands/
+-  https://thepitch.rareview.com/?ref=onepagelove
+-  https://marussiabeverages.com/distribution/
+-  https://www.bluemarinefoundation.com/the-sea-we-breathe/
 
   ## données historiques sur les festivals
 - Wikipedia

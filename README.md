@@ -53,3 +53,5 @@ et explicative (guider le lecteur dans un récit chronologique de juin à août)
 - https://fr.wikipedia.org/wiki/Openair_Frauenfeld
 - https://fr.wikipedia.org/wiki/Montreux_Jazz_Festival
 - https://fr.wikipedia.org/wiki/Caribana_Festival_de_Crans
+- https://www.ticketcorner.ch/fr/
+- autres sites officels des festivals 

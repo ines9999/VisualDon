@@ -33,7 +33,7 @@ La Suisse n'est pas le premier pays auquel on pense quand on parle de culture mu
  - Route des festivals : https://www.routedesfestivals.com/liste-des-festivals-pour-suisse-3.html 
 
   ## pour l'inspiration sur les storytelling avec des données
-- The Pudding
+The Pudding
 -  https://pudding.cool/2026/02/happy-map/
 -  https://pudding.cool/2024/09/courts/
 -  https://pudding.cool/2018/11/boy-bands/
@@ -42,7 +42,7 @@ La Suisse n'est pas le premier pays auquel on pense quand on parle de culture mu
 -  https://www.bluemarinefoundation.com/the-sea-we-breathe/
 
   ## données historiques sur les festivals
-- Wikipedia
+Wikipedia
 - https://fr.wikipedia.org/wiki/Pal%C3%A9o_Festival_Nyon
 - https://fr.wikipedia.org/wiki/Festi%27neuch
 - https://fr.wikipedia.org/wiki/Openair_Frauenfeld

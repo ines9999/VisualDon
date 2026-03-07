@@ -27,7 +27,7 @@ Les données sont stockées dans un fichier JSON et un CSV.
 La Suisse n'est pas le premier pays auquel on pense quand on parle de culture musicale et de festivals. Et pourtant, chaque été, le pays se transforme. Des centaines de milliers de personnes convergent vers les plaines, les collines et les bords de lac pour vivre des moments qui n'ont rien à envier aux grands rendez-vous européens. Quand on a commencé à réfléchir à ce projet, on savait qu'on voulait traiter un sujet événementiel, quelque chose de vivant, d'ancré dans le temps et dans l'espace. Les festivals se sont imposés assez naturellement. Et plus on y pensait, plus l'idée nous semblait intéressante : et si on retraçait le chemin d'un été en Suisse, festival après festival, du premier week-end de juin jusqu'aux dernières nuits d'août ? C'est cette envie de raconter une saison comme un voyage qui est au cœur de ce projet.
  
 ## Références
-  ## liste de festivlas 
+Liste de festivlas 
  - SBB : https://news.sbb.ch/fr/article/135979/les-festivals-2025-en-suisse-qu-est-ce-qui-se-passe-et-ou?.com 
  - Swiss reporting : https://swissreporting.com/what-are-the-trendiest-clubs-and-festivals-in-switzerland-in-2025.com
  - Route des festivals : https://www.routedesfestivals.com/liste-des-festivals-pour-suisse-3.html 

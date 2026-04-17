@@ -1,0 +1,578 @@
+[
+
+    {
+  
+      "id": 1,
+  
+      "name": "Caribana Festival",
+  
+      "city": "Crans-près-Céligny",
+  
+      "canton": "VD",
+  
+      "coordinates": { "lat": 46.3599, "lng": 6.2179 },
+  
+      "date_start": "2026-06-17",
+  
+      "date_end": "2026-06-20",
+  
+      "duration_days": 4,
+  
+      "genre": "Pop / Variété / Rap / Électro",
+  
+      "attendance": 30000,
+  
+      "ticket_price_per_day": 85,
+  
+      "ticket_price_full": 280,
+  
+      "free": false,
+  
+      "headliners": [
+  
+        { "name": "Kendji Girac", "illustration": "caribana_headliner1.png" },
+  
+        { "name": "M. Pokora", "illustration": "caribana_headliner2.png" },
+  
+        { "name": "Mika", "illustration": "caribana_headliner3.png" },
+  
+        { "name": "Niska", "illustration": "caribana_headliner4.png" },
+  
+        { "name": "Lost Frequencies", "illustration": "caribana_headliner5.png" }
+  
+      ],
+  
+      "anecdote": "L'ADN du festival est officiellement né d'une bande d'amis amoureux de musique, de soleil lacustre, et de cocktails — peu de grands festivals peuvent dire qu'ils sont nés d'un combo aussi estival.",
+  
+      "website": "https://www.caribana.ch",
+  
+      "map_order": 1
+  
+    },
+  
+    {
+  
+      "id": 2,
+  
+      "name": "Fête de la Musique",
+  
+      "city": "Genève",
+  
+      "canton": "GE",
+  
+      "coordinates": { "lat": 46.2004, "lng": 6.1490 },
+  
+      "date_start": "2026-06-19",
+  
+      "date_end": "2026-06-21",
+  
+      "duration_days": 3,
+  
+      "genre": "Tous genres",
+  
+      "attendance": 200000,
+  
+      "ticket_price_per_day": 0,
+  
+      "ticket_price_full": 0,
+  
+      "free": true,
+  
+      "headliners": [],
+  
+      "anecdote": "En 2025, Genève avait testé une scène alimentée par l'énergie renouvelable et la force du mollet — une scène qui tournait grâce à des gens qui pédalaient.",
+  
+      "website": "https://www.fetedelamusique.ch",
+  
+      "map_order": 2
+  
+    },
+  
+    {
+  
+      "id": 3,
+  
+      "name": "FestiNeuch",
+  
+      "city": "Neuchâtel",
+  
+      "canton": "NE",
+  
+      "coordinates": { "lat": 46.9900, "lng": 6.9293 },
+  
+      "date_start": "2026-06-11",
+  
+      "date_end": "2026-06-14",
+  
+      "duration_days": 4,
+  
+      "genre": "Rock / Pop / Chanson / Rap",
+  
+      "attendance": 57000,
+  
+      "ticket_price_per_day": 69,
+  
+      "ticket_price_full": 168,
+  
+      "free": false,
+  
+      "headliners": [
+  
+        { "name": "Jean-Louis Aubert", "illustration": "festineuch_headliner1.png" },
+  
+        { "name": "Feu! Chatterton", "illustration": "festineuch_headliner2.png" },
+  
+        { "name": "The Hives", "illustration": "festineuch_headliner3.png" },
+  
+        { "name": "Vanessa Paradis", "illustration": "festineuch_headliner4.png" },
+  
+        { "name": "Gaël Faye", "illustration": "festineuch_headliner5.png" }
+  
+      ],
+  
+      "anecdote": "Pour maîtriser l'affluence au bord de l'eau, même les enfants de 4 à 12 ans ont leur mini-billet à CHF 3 — un petit ticket pour un très grand open air.",
+  
+      "website": "https://www.festineuch.ch",
+  
+      "map_order": 3
+  
+    },
+  
+    {
+  
+      "id": 4,
+  
+      "name": "Openair Frauenfeld",
+  
+      "city": "Frauenfeld",
+  
+      "canton": "TG",
+  
+      "coordinates": { "lat": 47.5535, "lng": 8.8975 },
+  
+      "date_start": "2026-07-09",
+  
+      "date_end": "2026-07-11",
+  
+      "duration_days": 3,
+  
+      "genre": "Hip-Hop",
+  
+      "attendance": 150000,
+  
+      "ticket_price_per_day": 139,
+  
+      "ticket_price_full": 319,
+  
+      "free": false,
+  
+      "headliners": [
+  
+        { "name": "Wiz Khalifa", "illustration": "frauenfeld_headliner1.png" },
+  
+        { "name": "Don Toliver", "illustration": "frauenfeld_headliner2.png" },
+  
+        { "name": "Sido", "illustration": "frauenfeld_headliner3.png" },
+  
+        { "name": "Gunna", "illustration": "frauenfeld_headliner4.png" },
+  
+        { "name": "Ken Carson", "illustration": "frauenfeld_headliner5.png" }
+  
+      ],
+  
+      "anecdote": "Le plus grand festival hip-hop d'Europe a commencé sa vie sous un nom beaucoup moins bling — Out in the Green — et comme festival rock et blues.",
+  
+      "website": "https://www.openairfrauenfeld.ch",
+  
+      "map_order": 4
+  
+    },
+  
+    {
+  
+      "id": 5,
+  
+      "name": "Montreux Jazz Festival",
+  
+      "city": "Montreux",
+  
+      "canton": "VD",
+  
+      "coordinates": { "lat": 46.4312, "lng": 6.9107 },
+  
+      "date_start": "2026-07-03",
+  
+      "date_end": "2026-07-18",
+  
+      "duration_days": 16,
+  
+      "genre": "Jazz / Rock / Pop / Hip-Hop",
+  
+      "attendance": 250000,
+  
+      "ticket_price_per_day": null,
+  
+      "ticket_price_full": null,
+  
+      "ticket_price_note": "Prix variable selon les concerts, de CHF 500 à CHF 1600 pour les packages hospitality.",
+  
+      "free": false,
+  
+      "headliners": [
+  
+        { "name": "Sting", "illustration": "mjf_headliner1.png" },
+  
+        { "name": "Nick Cave", "illustration": "mjf_headliner2.png" },
+  
+        { "name": "RAYE", "illustration": "mjf_headliner3.png" },
+  
+        { "name": "Moby", "illustration": "mjf_headliner4.png" },
+  
+        { "name": "John Legend", "illustration": "mjf_headliner5.png" }
+  
+      ],
+  
+      "anecdote": "Deep Purple et Prince sont explicitement cités par le festival comme ayant contribué à sa mythologie — Montreux est l'un des rares festivals dont la légende a fini dans des chansons.",
+  
+      "website": "https://www.montreuxjazzfestival.com",
+  
+      "map_order": 5
+  
+    },
+  
+    {
+  
+      "id": 6,
+  
+      "name": "Gurtenfestival",
+  
+      "city": "Berne",
+  
+      "canton": "BE",
+  
+      "coordinates": { "lat": 46.9197, "lng": 7.4353 },
+  
+      "date_start": "2026-07-15",
+  
+      "date_end": "2026-07-18",
+  
+      "duration_days": 4,
+  
+      "genre": "Pop / Rock / Rap / Électro",
+  
+      "attendance": 20000,
+  
+      "ticket_price_per_day": 137,
+  
+      "ticket_price_full": 373,
+  
+      "free": false,
+  
+      "headliners": [
+  
+        { "name": "Lorde", "illustration": "gurten_headliner1.png" },
+  
+        { "name": "Sean Paul", "illustration": "gurten_headliner2.png" },
+  
+        { "name": "Teddy Swims", "illustration": "gurten_headliner3.png" },
+  
+        { "name": "Kraftklub", "illustration": "gurten_headliner4.png" },
+  
+        { "name": "Nina Chuba", "illustration": "gurten_headliner5.png" }
+  
+      ],
+  
+      "anecdote": "La Waldbühne, troisième scène du festival, est réservée exclusivement aux groupes suisses — un coin label qualité locale au coeur d'un grand festival international.",
+  
+      "website": "https://www.gurtenfestival.ch",
+  
+      "map_order": 6
+  
+    },
+  
+    {
+  
+      "id": 7,
+  
+      "name": "Sion sous les Étoiles",
+  
+      "city": "Sion",
+  
+      "canton": "VS",
+  
+      "coordinates": { "lat": 46.2330, "lng": 7.3598 },
+  
+      "date_start": "2026-07-16",
+  
+      "date_end": "2026-07-18",
+  
+      "duration_days": 3,
+  
+      "genre": "Chanson / Pop / Variété francophone",
+  
+      "attendance": null,
+  
+      "ticket_price_per_day": 107,
+  
+      "ticket_price_full": 285.90,
+  
+      "free": false,
+  
+      "headliners": [
+  
+        { "name": "Julien Doré", "illustration": "sion_headliner1.png" },
+  
+        { "name": "Christophe Maé", "illustration": "sion_headliner2.png" },
+  
+        { "name": "GIMS", "illustration": "sion_headliner3.png" },
+  
+        { "name": "Louane", "illustration": "sion_headliner4.png" },
+  
+        { "name": "Vitaa", "illustration": "sion_headliner5.png" }
+  
+      ],
+  
+      "anecdote": "Monter une scène sous les étoiles juste à côté du stade de football de Tourbillon — un mélange très suisse entre concert géant et repère sportif.",
+  
+      "website": "https://www.sionsouslesetoiles.ch",
+  
+      "map_order": 7
+  
+    },
+  
+    {
+  
+      "id": 8,
+  
+      "name": "Paléo Festival",
+  
+      "city": "Nyon",
+  
+      "canton": "VD",
+  
+      "coordinates": { "lat": 46.4024, "lng": 6.2116 },
+  
+      "date_start": "2026-07-21",
+  
+      "date_end": "2026-07-26",
+  
+      "duration_days": 6,
+  
+      "genre": "Généraliste",
+  
+      "attendance": 250000,
+  
+      "ticket_price_per_day": 99,
+  
+      "ticket_price_full": 465,
+  
+      "free": false,
+  
+      "headliners": [
+  
+        { "name": "Twenty One Pilots", "illustration": "paleo_headliner1.png" },
+  
+        { "name": "The Cure", "illustration": "paleo_headliner2.png" },
+  
+        { "name": "Gorillaz", "illustration": "paleo_headliner3.png" },
+  
+        { "name": "Lorde", "illustration": "paleo_headliner4.png" },
+  
+        { "name": "Katy Perry", "illustration": "paleo_headliner5.png" }
+  
+      ],
+  
+      "anecdote": "Paléo revendique lui-même sa poésie très terre-à-terre : ici on danse, on chante… et parfois on perd une chaussure.",
+  
+      "website": "https://www.paleo.ch",
+  
+      "map_order": 8
+  
+    },
+  
+    {
+  
+      "id": 9,
+  
+      "name": "Lake Parade",
+  
+      "city": "Genève",
+  
+      "canton": "GE",
+  
+      "coordinates": { "lat": 46.2044, "lng": 6.1432 },
+  
+      "date_start": "2026-07-01",
+  
+      "date_end": "2026-07-01",
+  
+      "duration_days": 1,
+  
+      "genre": "Électro / House / Techno",
+  
+      "attendance": 200000,
+  
+      "ticket_price_per_day": 0,
+  
+      "ticket_price_full": 0,
+  
+      "free": true,
+  
+      "headliners": [
+  
+        { "name": "Arodes", "illustration": "lakeparade_headliner1.png" },
+  
+        { "name": "Fedele", "illustration": "lakeparade_headliner2.png" },
+  
+        { "name": "Shimza", "illustration": "lakeparade_headliner3.png" }
+  
+      ],
+  
+      "anecdote": "En 2025, la parade s'était offert une version REVERSE — un défilé électro qui appuyait volontairement sur le bouton retour arrière.",
+  
+      "website": "https://www.lakeparade.ch",
+  
+      "map_order": 9
+  
+    },
+  
+    {
+  
+      "id": 10,
+  
+      "name": "LakeLive",
+  
+      "city": "Biel/Bienne",
+  
+      "canton": "BE",
+  
+      "coordinates": { "lat": 47.1225, "lng": 7.2353 },
+  
+      "date_start": "2026-07-30",
+  
+      "date_end": "2026-08-08",
+  
+      "duration_days": 10,
+  
+      "genre": "Pop / Rock / Latin / Urban",
+  
+      "attendance": null,
+  
+      "ticket_price_per_day": 109,
+  
+      "ticket_price_full": 299,
+  
+      "free": false,
+  
+      "headliners": [
+  
+        { "name": "Lenny Kravitz", "illustration": "lakelive_headliner1.png" },
+  
+        { "name": "Nicky Jam", "illustration": "lakelive_headliner2.png" },
+  
+        { "name": "Louane", "illustration": "lakelive_headliner3.png" },
+  
+        { "name": "Amy Macdonald", "illustration": "lakelive_headliner4.png" },
+  
+        { "name": "Mark Forster", "illustration": "lakelive_headliner5.png" }
+  
+      ],
+  
+      "anecdote": "Ton billet de concert fait aussi office de sésame pour continuer la nuit à l'afterparty — pratique quand tu pensais ne sortir que pour un concert.",
+  
+      "website": "https://www.lakelive.ch",
+  
+      "map_order": 10
+  
+    },
+  
+    {
+  
+      "id": 11,
+  
+      "name": "Street Parade",
+  
+      "city": "Zurich",
+  
+      "canton": "ZH",
+  
+      "coordinates": { "lat": 47.3663, "lng": 8.5392 },
+  
+      "date_start": "2026-08-08",
+  
+      "date_end": "2026-08-08",
+  
+      "duration_days": 1,
+  
+      "genre": "Électro / Techno / House",
+  
+      "attendance": 1000000,
+  
+      "ticket_price_per_day": 0,
+  
+      "ticket_price_full": 0,
+  
+      "free": true,
+  
+      "headliners": [],
+  
+      "anecdote": "C'est probablement l'un des seuls événements d'Europe où le billet le plus distribué coûte précisément CHF 0.",
+  
+      "website": "https://www.streetparade.com",
+  
+      "map_order": 11
+  
+    },
+  
+    {
+  
+      "id": 12,
+  
+      "name": "Venoge Festival",
+  
+      "city": "Penthaz",
+  
+      "canton": "VD",
+  
+      "coordinates": { "lat": 46.6333, "lng": 6.5167 },
+  
+      "date_start": "2026-08-11",
+  
+      "date_end": "2026-08-15",
+  
+      "duration_days": 5,
+  
+      "genre": "Urban / Électro / Pop / Rock",
+  
+      "attendance": 50000,
+  
+      "ticket_price_per_day": 89.50,
+  
+      "ticket_price_full": 329,
+  
+      "free": false,
+  
+      "headliners": [
+  
+        { "name": "David Guetta", "illustration": "venoge_headliner1.png" },
+  
+        { "name": "Afrojack", "illustration": "venoge_headliner2.png" },
+  
+        { "name": "Synapson", "illustration": "venoge_headliner3.png" },
+  
+        { "name": "Helmut Fritz", "illustration": "venoge_headliner4.png" },
+  
+        { "name": "PLK", "illustration": "venoge_headliner5.png" }
+  
+      ],
+  
+      "anecdote": "L'annonce de David Guetta en show suisse exclusif a vidé le stock QoQa en 29 minutes — soit à peu près le temps d'un warm-up bien mené.",
+  
+      "website": "https://www.venogefestival.ch",
+  
+      "map_order": 12
+  
+    }
+  
+  ]
+   

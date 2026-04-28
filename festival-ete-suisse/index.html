@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Un Été en Suisse — Festivals 2026</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500&family=Space+Mono:ital@0;1&display=swap" rel="stylesheet">
+  <link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet">
+  <link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header id="site-header">
+    <div class="header-logo">UN ÉTÉ EN SUISSE</div>
+    <div class="header-actions">
+      <button class="header-btn" id="btnAllFestivals">Tous les festivals</button>
+      <button class="header-btn" id="btnCompareFestivals">Comparer les festivals</button>
+    </div>
+  </header>
+
+  <!-- OVERLAY : TOUS LES FESTIVALS -->
+  <div id="overlay-all" class="site-overlay" style="display:none">
+    <div class="site-overlay-inner">
+      <div class="site-overlay-head">
+        <h2 class="site-overlay-title">TOUS LES FESTIVALS — ÉTÉ 2026</h2>
+        <button class="site-overlay-close" id="closeAll">✕</button>
+      </div>
+      <div class="overlay-filters">
+        <input type="text" id="search-festivals" class="overlay-search" placeholder="Rechercher...">
+        <div class="overlay-chips" id="genre-chips">
+          <button class="chip active" data-genre="tous">Tous</button>
+          <button class="chip" data-genre="rock">Rock</button>
+          <button class="chip" data-genre="hip-hop">Hip-Hop</button>
+          <button class="chip" data-genre="jazz">Jazz</button>
+          <button class="chip" data-genre="électro">Électro</button>
+          <button class="chip" data-genre="gratuit">Gratuit</button>
+        </div>
+      </div>
+      <div class="festivals-grid" id="festivals-grid"></div>
+    </div>
+  </div>
+
+  <!-- OVERLAY : COMPARER LES FESTIVALS -->
+  <div id="overlay-compare" class="site-overlay" style="display:none">
+    <div class="site-overlay-inner">
+      <div class="site-overlay-head">
+        <h2 class="site-overlay-title">COMPARER LES FESTIVALS</h2>
+        <button class="site-overlay-close" id="closeCompare">✕</button>
+      </div>
+      <div class="compare-sort">
+        <span class="sort-label">TRIER PAR :</span>
+        <div id="sort-btns">
+          <button class="sort-btn active" data-sort="price_asc">Prix ↑</button>
+          <button class="sort-btn" data-sort="price_desc">Prix ↓</button>
+          <button class="sort-btn" data-sort="genre">Genre</button>
+          <button class="sort-btn" data-sort="attendance">Participants</button>
+          <button class="sort-btn" data-sort="duration">Durée</button>
+          <button class="sort-btn" data-sort="free">Gratuit / Payant</button>
+        </div>
+      </div>
+      <div class="compare-table-wrap">
+        <table class="compare-table" id="compare-table">
+          <thead>
+            <tr>
+              <th>Festival</th>
+              <th>Genre</th>
+              <th>Gratuit</th>
+              <th>Prix/jour</th>
+              <th>Prix 3 jours</th>
+              <th>Participants</th>
+            </tr>
+          </thead>
+          <tbody id="compare-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- INTRO -->
+  <section id="intro">
+    <div class="intro-bg"></div>
+    <div class="intro-content">
+      <p class="intro-label">Suisse · Été 2026</p>
+      <h1 class="intro-title">UN ÉTÉ<br><span class="neon-text">EN SUISSE</span></h1>
+      <p class="intro-sub">12 festivals. Des centaines de milliers de festivaliers.<br>Un voyage sonore à travers la Confédération.</p>
+      <button id="startBtn" class="start-btn">
+        <span>Commencer le voyage</span>
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 3v14M3 10l7 7 7-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="scroll-hint">
+      <span>scroll</span>
+      <div class="scroll-line"></div>
+    </div>
+  </section>
+
+  <!-- CARTE -->
+  <div id="map-container">
+    <div id="map"></div>
+
+    <!-- Barre de navigation festivals -->
+    <span id="progress-total" style="display:none">12</span>
+  </div>
+
+  <!-- PANEL FESTIVAL -->
+  <div id="festival-panel">
+    <!-- Bouton rétracter -->
+    <button id="panel-toggle" title="Rétracter le panneau">
+      <svg id="panel-toggle-icon" width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <path d="M9 2L4 7l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <div id="panel-inner">
+
+      <div class="panel-header">
+        <div class="festival-index-label">
+          <span id="fst-index">01</span>
+          <div class="fst-line"></div>
+        </div>
+        <div class="festival-tags">
+          <span id="fst-canton" class="tag"></span>
+          <span id="fst-genre" class="tag tag-genre"></span>
+        </div>
+      </div>
+
+      <h2 id="fst-name"></h2>
+      <p id="fst-city" class="fst-city"></p>
+
+      <div class="fst-stats">
+        <div class="stat-block">
+          <span class="stat-label">Dates</span>
+          <span class="stat-value" id="fst-dates"></span>
+        </div>
+        <div class="stat-block">
+          <span class="stat-label">Durée</span>
+          <span class="stat-value" id="fst-duration"></span>
+        </div>
+        <div class="stat-block">
+          <span class="stat-label">Fréquentation</span>
+          <span class="stat-value" id="fst-attendance"></span>
+        </div>
+        <div class="stat-block">
+          <span class="stat-label">Billet / jour</span>
+          <span class="stat-value" id="fst-ticket"></span>
+        </div>
+      </div>
+
+      <div class="fst-headliners">
+        <p class="section-label">Têtes d'affiche</p>
+        <div id="fst-headliners-list"></div>
+      </div>
+
+      <div class="fst-anecdote">
+        <p class="section-label">Le saviez-vous ?</p>
+        <p id="fst-anecdote-text"></p>
+      </div>
+
+      <a id="fst-website" href="#" target="_blank" class="fst-link">Visiter le site officiel →</a>
+
+    </div>
+  </div>
+
+  <!-- OUTRO -->
+  <section id="outro">
+    <div class="outro-content">
+      <p class="intro-label">Fin du voyage</p>
+      <h2 class="outro-title">L'été en <span class="neon-text">chiffres</span></h2>
+      <div class="outro-stats">
+        <div class="outro-stat">
+          <span class="outro-number" id="o-festivals">12</span>
+          <span class="outro-label">festivals</span>
+        </div>
+        <div class="outro-stat">
+          <span class="outro-number" id="o-attendees">2.2M+</span>
+          <span class="outro-label">festivaliers</span>
+        </div>
+        <div class="outro-stat">
+          <span class="outro-number" id="o-cantons">8</span>
+          <span class="outro-label">cantons</span>
+        </div>
+        <div class="outro-stat">
+          <span class="outro-number" id="o-days">82</span>
+          <span class="outro-label">jours de musique</span>
+        </div>
+      </div>
+      <div id="outro-conclusion" class="outro-conclusion"></div>
+      <button id="restartBtn" class="start-btn" style="margin-top:2rem">Recommencer le voyage</button>
+    </div>
+  </section>
+
+  <!-- Barre de navigation — hors de tout overlay -->
+  <div id="festival-nav" style="display:none">
+    <button id="prevBtn" class="nav-arrow" disabled>
+      <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><path d="M11 4L5 9l6 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+    <div id="festival-nav-dots"></div>
+    <button id="nextBtn" class="nav-arrow">
+      <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><path d="M7 4l6 5-6 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

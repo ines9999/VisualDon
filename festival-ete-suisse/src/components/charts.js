@@ -4,6 +4,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { ARTIST_PHOTOS } from './artist_photos.js';
 
 // ===== STATE =====
 const isDayMode = false;
@@ -16,6 +17,9 @@ let crowdMeshes = [];
 let lightBeams = [];
 let beatTime = 0;
 let currentNeon = '#e8ff47';
+let particlesRef = null;
+let fogRefs = [];
+let confettiRefs = [];
 
 // Artist hover state
 let artistItems = [];
@@ -66,12 +70,17 @@ function getGenreColors(fest, neon) {
 // ===== FOULE 3D =====
 function createCrowdPerson(scale, x, z) {
   const group = new THREE.Group();
-  // Couleurs légèrement variées pour la foule — bloom naturel
-  const crowdColors = [0x0a0a14, 0x080812, 0x0c0a16, 0x080a10, 0x0a0810];
+  // Couleurs foule — colorées le jour, sombres la nuit
+  const _isDayCrowd = false;
+  const crowdColors = _isDayCrowd
+    ? [0x2244aa, 0xaa2222, 0x22aa44, 0xaaaa22, 0xaa6622, 0x8822aa, 0x22aaaa, 0xaa4488]
+    : [0x1a1a3a, 0x141428, 0x1c1a32, 0x141820, 0x181428];
+  // Couleurs emissives variées pour donner de la vie à la foule
+  const crowdEmissives = [0x0a0a22, 0x22110a, 0x0a1a0a, 0x1a1400, 0x0a0a18];
   const mat = new THREE.MeshStandardMaterial({
     color: crowdColors[Math.floor(Math.random() * crowdColors.length)],
-    emissive: new THREE.Color(0x050508),
-    emissiveIntensity: 0.3,
+    emissive: new THREE.Color(crowdEmissives[Math.floor(Math.random() * crowdEmissives.length)]),
+    emissiveIntensity: _isDayCrowd ? 0.6 : 0.9,
     roughness: 0.9,
     metalness: 0.1,
   });
@@ -112,6 +121,83 @@ function createCrowdPerson(scale, x, z) {
   return { group, armGroupL, armGroupR, body,
     phase: Math.random()*Math.PI*2, speed: 0.7+Math.random()*0.7,
     baseY: 0, row: 0, scale };
+}
+
+
+// ===== ARTISTE — PHOTO CIRCULAIRE =====
+// Layer 1 = bloom, Layer 2 = no-bloom (photos)
+const BLOOM_LAYER = 1;
+const NO_BLOOM_LAYER = 2;
+
+function createArtistCircle(name, neon, scale) {
+  const SIZE = 512;
+  const c = document.createElement('canvas');
+  c.width = SIZE; c.height = SIZE;
+  const ctx = c.getContext('2d');
+
+  const cx = SIZE / 2, cy = SIZE / 2;
+  const r = SIZE * 0.46;
+  const photoSrc = ARTIST_PHOTOS[name];
+
+  const drawCircle = (img) => {
+    ctx.clearRect(0, 0, SIZE, SIZE);
+
+    // Fond sombre
+    ctx.beginPath(); ctx.arc(cx, cy, r + 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#0a0a14'; ctx.fill();
+
+    // Photo clippée — recadrage centré haut pour capturer le visage
+    ctx.save();
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.clip();
+    if (img) {
+      const iw = img.naturalWidth || img.width;
+      const ih = img.naturalHeight || img.height;
+      // Prendre un carré centré horizontalement, focus sur le tiers haut
+      const sideLen = Math.min(iw, ih);
+      const srcX = (iw - sideLen) / 2;
+      const srcY = Math.max(0, (ih - sideLen) * 0.15);
+      ctx.drawImage(img, srcX, srcY, sideLen, sideLen, cx - r, cy - r, r * 2, r * 2);
+      // Assombrit pour passer sous le seuil bloom (threshold=0.7)
+      ctx.fillStyle = 'rgba(0,0,0,0.45)';
+      ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+    } else {
+      ctx.fillStyle = '#1a1a2e';
+      ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+      ctx.fillStyle = 'rgba(200,200,200,0.6)';
+      ctx.font = `bold ${SIZE * 0.25}px monospace`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(name[0].toUpperCase(), cx, cy);
+    }
+    ctx.restore();
+
+    // Bordure néon — fine et nette
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.strokeStyle = neon; ctx.lineWidth = 5; ctx.stroke();
+  };
+
+  const tex = new THREE.CanvasTexture(c);
+  const mat = new THREE.SpriteMaterial({
+    map: tex, transparent: true, depthWrite: false, alphaTest: 0.01,
+    toneMapped: false,
+  });
+  const sprite = new THREE.Sprite(mat);
+  sprite.scale.set(scale * 3.6, scale * 3.6, 1);
+  // Exclure du bloom layer
+  sprite.layers.set(NO_BLOOM_LAYER);
+
+  if (photoSrc) {
+    const img = new Image();
+    img.onload = () => { drawCircle(img); tex.needsUpdate = true; };
+    img.onerror = () => { drawCircle(null); tex.needsUpdate = true; };
+    img.src = photoSrc;
+  } else {
+    drawCircle(null);
+  }
+
+  const group = new THREE.Group();
+  group.add(sprite);
+  return { group, armGroupL: null, armGroupR: null, sprite, mat };
 }
 
 // ===== ARTISTE — SILHOUETTE 2D SUR PLAN =====
@@ -442,12 +528,48 @@ function createArtist3D(name, _neon, scale) {
 }
 
 // ===== DECORS =====
+// ===== FONDS D'ÉCRAN PAR FESTIVAL — fond CSS de page =====
+const FESTIVAL_BACKGROUNDS = {
+  'caribana':        '/images/decor/caribana.png',
+  'fetedelamusique': '/images/decor/fete-de-la-musique.png',
+  'festineuch':      '/images/decor/FESTINEUCH.png',
+  'frauenfeld':      '/images/decor/OPENAIR-FRAUENFELD.png',
+  'montreux':        '/images/decor/MONTREUX-JAZZ.png',
+  'gurten':          '/images/decor/GURTENFESTIVAL.png',
+  'sion':            '/images/decor/SION-SOUS-LES-ETOILES.png',
+  'paleo':           '/images/decor/paleo.png',
+  'lakeparade':      '/images/decor/LAKE-PARADE.png',
+  'lakelive':        '/images/decor/LAKELIVE.png',
+  'streetparade':    '/images/decor/STREET-PARADE.png',
+  'venoge':          '/images/decor/VENOGE.png',
+  'geneva':          '/images/decor/fete-de-la-musique.png',
+};
+
+function applyFestivalBackground(decorId) {
+  const overlay = document.getElementById('festival-overlay');
+  if (!overlay) return;
+  const src = FESTIVAL_BACKGROUNDS[decorId];
+  if (src) {
+    overlay.style.backgroundImage = `url('${src}')`;
+    overlay.style.backgroundSize = 'cover';
+    overlay.style.backgroundPosition = 'center top';
+    overlay.style.backgroundRepeat = 'no-repeat';
+  } else {
+    overlay.style.backgroundImage = 'none';
+  }
+}
+
+function clearFestivalBackground() {
+  const overlay = document.getElementById('festival-overlay');
+  if (overlay) overlay.style.backgroundImage = 'none';
+}
+
 function getFestivalDecorId(fest) {
   const city = (fest.city||'').toLowerCase();
   const name = (fest.name||'').toLowerCase();
   if (name.includes('caribana')) return 'caribana';
-  if (name.includes('lake parade')) return 'geneva';
-  if (name.includes('fête de la musique')||name.includes('fete de la musique')) return 'geneva';
+  if (name.includes('lake parade')) return 'lakeparade';
+  if (name.includes('fête de la musique')||name.includes('fete de la musique')) return 'fetedelamusique';
   if (city.includes('genève')||city.includes('geneve')) return 'geneva';
   if (name.includes('montreux')) return 'montreux';
   if (name.includes('paléo')||name.includes('paleo')) return 'paleo';
@@ -458,336 +580,96 @@ function getFestivalDecorId(fest) {
   if (name.includes('festineuch')||city.includes('neuchâtel')||city.includes('neuchatel')) return 'festineuch';
   if (name.includes('lakelive')||city.includes('biel')||city.includes('bienne')) return 'lakelive';
   if (name.includes('venoge')||city.includes('penthaz')) return 'venoge';
+  if (name.includes('greenfield')||city.includes('interlaken')) return 'greenfield';
+  if (name.includes('st. gallen')||name.includes('saint-gall')||city.includes('st. gallen')) return 'stgallen';
+  if (name.includes('estival')||name.includes('jazz lugano')||city.includes('lugano')) return 'lugano';
   return 'default';
 }
 
 
-function addPalmTree(scene, x, z, h=6) {
-  const trunk = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.15, 0.28, h, 8),
-    new THREE.MeshPhysicalMaterial({color:0x8b6914, roughness:0.95})
-  );
-  trunk.position.set(x, h/2, z);
-  trunk.rotation.z = (Math.random()-0.5)*0.25;
-  scene.add(trunk);
-  for(let fi=0;fi<7;fi++){
-    const angle = fi/7*Math.PI*2;
-    const leaf = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.05, 0.05, 3.5, 4),
-      new THREE.MeshPhysicalMaterial({color:0x2d6e2d, roughness:0.9})
-    );
-    leaf.position.set(x+Math.cos(angle)*1.6, h+0.6, z+Math.sin(angle)*0.6);
-    leaf.rotation.z = Math.cos(angle)*0.75;
-    leaf.rotation.x = Math.sin(angle)*0.4;
-    scene.add(leaf);
-  }
-  const coconut = new THREE.Mesh(
-    new THREE.SphereGeometry(0.22, 8, 8),
-    new THREE.MeshPhysicalMaterial({color:0x5c3d1a, roughness:0.9})
-  );
-  coconut.position.set(x, h+0.2, z);
-  scene.add(coconut);
-}
-
-function addLake(scene, color=0x0a2a4a, zPos=-14) {
-  const lake = new THREE.Mesh(
-    new THREE.PlaneGeometry(80, 30),
-    new THREE.MeshPhysicalMaterial({color, roughness:0.0, metalness:0.1, transmission:0.55})
-  );
-  lake.rotation.x = -Math.PI/2;
-  lake.position.set(0, 0.02, zPos);
-  scene.add(lake);
-}
-
-function addMountains(scene, peaks, color=0x334455) {
-  peaks.forEach(([xp,h]) => {
-    const m = new THREE.Mesh(
-      new THREE.ConeGeometry(h/2, h, 5),
-      new THREE.MeshPhysicalMaterial({color, roughness:0.9})
-    );
-    m.position.set(xp, h/2, -42);
-    scene.add(m);
-    // Neige
-    const snow = new THREE.Mesh(
-      new THREE.ConeGeometry(h/6, h/4, 5),
-      new THREE.MeshPhysicalMaterial({color:0xeeeeff, roughness:0.8})
-    );
-    snow.position.set(xp, h-h/8, -42);
-    scene.add(snow);
+// ===== FRAUENFELD DECOR =====
+function addFrauenfeldDecor(scene) {
+  const ffL=new THREE.PointLight(0x8800ff,4,25); ffL.position.set(0,8,-8); scene.add(ffL);
+  const ffL2=new THREE.PointLight(0xff8800,3,20); ffL2.position.set(-12,5,-8); scene.add(ffL2);
+  [-14,14].forEach(xp=>{
+    const wall=new THREE.Mesh(new THREE.BoxGeometry(0.5,12,16),new THREE.MeshStandardMaterial({color:0x222222,emissive:0x111111,emissiveIntensity:0.3,roughness:0.95}));
+    wall.position.set(xp,6,-14); scene.add(wall);
+    for(let gi=0;gi<10;gi++){
+      const gCol=FESTIVAL_NEONS[Math.floor(Math.random()*FESTIVAL_NEONS.length)];
+      const g=new THREE.Mesh(new THREE.BoxGeometry(0.06,2+Math.random()*2.5,2.5+Math.random()*3),new THREE.MeshBasicMaterial({color:hexToColor(gCol)}));
+      g.position.set(xp+(xp>0?-0.35:0.35),2+Math.random()*7,-11+Math.random()*6); scene.add(g);
+      const gl=new THREE.PointLight(hexToColor(gCol),1.5,5); gl.position.set(xp,g.position.y,-11); scene.add(gl);
+    }
   });
+  [-11,11].forEach((xp,si)=>{
+    const scr=new THREE.Mesh(new THREE.BoxGeometry(5,7,0.2),new THREE.MeshBasicMaterial({color:si===0?0x002244:0x220044}));
+    scr.position.set(xp,5,-10); scr.rotation.y=xp<0?0.2:-0.2; scene.add(scr);
+    const bL=new THREE.PointLight(si===0?0x0088ff:0xff0088,3,12); bL.position.set(xp,5,-8); scene.add(bL);
+    for(let li=0;li<5;li++){
+      const line=new THREE.Mesh(new THREE.BoxGeometry(4,0.12,0.05),new THREE.MeshBasicMaterial({color:hexToColor(FESTIVAL_NEONS[(li+si*3)%FESTIVAL_NEONS.length])}));
+      line.position.set(xp,2+li*1.1,-9.8); line.rotation.y=xp<0?0.2:-0.2; scene.add(line);
+    }
+  });
+  const screen=new THREE.Mesh(new THREE.BoxGeometry(8,5,0.2),new THREE.MeshBasicMaterial({color:0x001133}));
+  screen.position.set(-3,7,-11); scene.add(screen);
+  const sL=new THREE.PointLight(0x4488ff,3,15); sL.position.set(-3,7,-9); scene.add(sL);
 }
 
-function addSwissFlag(scene, x, z, h=8) {
-  const pole = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.07, 0.07, h, 6),
-    new THREE.MeshPhysicalMaterial({color:0x888888, roughness:0.5, metalness:0.8})
-  );
-  pole.position.set(x, h/2, z);
-  scene.add(pole);
-  const flag = new THREE.Mesh(
-    new THREE.BoxGeometry(2.6, 2.6, 0.06),
-    new THREE.MeshBasicMaterial({color:0xcc0000, side:THREE.DoubleSide})
-  );
-  flag.position.set(x+1.4, h-1.3, z);
-  scene.add(flag);
-  const cv = new THREE.Mesh(
-    new THREE.BoxGeometry(0.52, 1.56, 0.08),
-    new THREE.MeshBasicMaterial({color:0xffffff})
-  );
-  cv.position.set(x+1.4, h-1.3, z+0.05);
-  scene.add(cv);
-  const ch2 = new THREE.Mesh(
-    new THREE.BoxGeometry(1.56, 0.52, 0.08),
-    new THREE.MeshBasicMaterial({color:0xffffff})
-  );
-  ch2.position.set(x+1.4, h-1.3, z+0.05);
-  scene.add(ch2);
-}
-
-function addFestivalDecor(decorId, neon, scene) {
-  switch(decorId) {
-    // ── CARIBANA — Lac Léman, palmiers ──
-    case 'caribana': {
-      addLake(scene, 0x1a4878, -28);
-      [-22,-12,0,12,22].forEach(x => addPalmTree(scene, x, -14, 5+Math.random()*2));
-      // Bateau à voile
-      const hull=new THREE.Mesh(new THREE.BoxGeometry(4,0.8,1.5),new THREE.MeshPhysicalMaterial({color:0xeeeedd,roughness:0.6}));
-      hull.position.set(18,0.4,-16); scene.add(hull);
-      const mast=new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.06,5,6),new THREE.MeshPhysicalMaterial({color:0x8b6914}));
-      mast.position.set(18,3,-16); scene.add(mast);
-      const sail=new THREE.Mesh(new THREE.ConeGeometry(1.8,4,4),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.85,side:THREE.DoubleSide}));
-      sail.position.set(18,3.5,-16); sail.rotation.z=0.2; scene.add(sail);
-      break;
-    }
-
-    // ── FÊTE DE LA MUSIQUE / LAKE PARADE — Genève, jet d'eau, drapeau suisse ──
-    case 'geneva': {
-      addLake(scene, 0x0a2a4a, -26);
-
-      // Jet d'eau de Genève — colonne centrale haute
-      for(let i=0;i<6;i++){
-        const jet=new THREE.Mesh(
-          new THREE.CylinderGeometry(0.04+i*0.03, 0.2+i*0.04, 8+i*2, 8, 1, true),
-          new THREE.MeshBasicMaterial({color:0xaaddff,transparent:true,opacity:0.35-i*0.04,side:THREE.DoubleSide})
-        );
-        jet.position.set(8, 4+i*2, -16); scene.add(jet);
-      }
-      // Lumière bleue sous le jet
-      const jetLight=new THREE.PointLight(0x88ccff, 2, 15);
-      jetLight.position.set(8,1,-16); scene.add(jetLight);
-      // Rive avec bâtiments genevois
-      [[-20,6],[-12,8],[0,5],[12,7],[20,6]].forEach(([xp,h])=>{
-        const b=new THREE.Mesh(new THREE.BoxGeometry(3.5,h,2.5),new THREE.MeshPhysicalMaterial({color:0xc8b89a,roughness:0.7}));
-        b.position.set(xp,h/2,-22); scene.add(b);
-        const roof=new THREE.Mesh(new THREE.CylinderGeometry(0,2,2,4),new THREE.MeshPhysicalMaterial({color:0x556677,roughness:0.8}));
-        roof.position.set(xp,h+1,-22); scene.add(roof);
-      });
-      addMountains(scene,[[-30,12],[-15,18],[0,14],[15,16],[30,13]],0x445566);
-      break;
-    }
-
-    // ── MONTREUX JAZZ — Château Chillon, Alpes, lac ──
-    case 'montreux': {
-      addLake(scene, 0x0a2840, -28);
-      // Château Chillon détaillé
-      const cMat=new THREE.MeshPhysicalMaterial({color:0xc0a878,roughness:0.7,metalness:0.1});
-      const castleBase=new THREE.Mesh(new THREE.BoxGeometry(10,5,5),cMat); castleBase.position.set(-16,2.5,-18); scene.add(castleBase);
-      [[-20,5],[-16,7],[-12,4]].forEach(([xp,h])=>{
-        const t=new THREE.Mesh(new THREE.CylinderGeometry(1.2,1.2,h,8),cMat.clone()); t.position.set(xp,h/2,-17); scene.add(t);
-        const cone=new THREE.Mesh(new THREE.ConeGeometry(1.4,2.5,8),new THREE.MeshPhysicalMaterial({color:0x6a1010,roughness:0.8}));
-        cone.position.set(xp,h+1.2,-17); scene.add(cone);
-      });
-      // Créneaux
-      for(let ci=-2;ci<=2;ci++){
-        const cr=new THREE.Mesh(new THREE.BoxGeometry(0.6,0.8,0.4),cMat.clone());
-        cr.position.set(-16+ci*1.8,5.4,-16.8); scene.add(cr);
-      }
-      // Reflet rouge Montreux Jazz dans le lac
-      const jazzLight=new THREE.PointLight(0xff2200,1.5,20); jazzLight.position.set(0,1,-18); scene.add(jazzLight);
-      addMountains(scene,[[-30,14],[-15,20],[0,16],[15,18],[30,14]],0x334455);
-      break;
-    }
-
-    // ── PALÉO NYON — Grande prairie, arbres, château de Nyon ──
-    case 'paleo': {
-      // Herbe verte
-      const grass=new THREE.Mesh(new THREE.PlaneGeometry(100,60),new THREE.MeshPhysicalMaterial({color:0x1a3a18,roughness:0.95}));
-      grass.rotation.x=-Math.PI/2; grass.position.set(0,0.01,-10); scene.add(grass);
-      // Arbres variés
-      [[-28,-20],[-20,-22],[-12,-19],[12,-21],[20,-20],[28,-22]].forEach(([xp,zp])=>{
-        const h=3+Math.random()*2;
-        const trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.18,0.25,h,8),new THREE.MeshPhysicalMaterial({color:0x5c3317,roughness:0.95}));
-        trunk.position.set(xp,h/2,zp); scene.add(trunk);
-        const top=new THREE.Mesh(new THREE.SphereGeometry(1.4,8,8),new THREE.MeshPhysicalMaterial({color:0x1f4a1a,roughness:0.9}));
-        top.position.set(xp,h+0.8,zp); scene.add(top);
-      });
-      // Château de Nyon en fond
-      const nyonMat=new THREE.MeshPhysicalMaterial({color:0xd4c4a0,roughness:0.7});
-      const nCastle=new THREE.Mesh(new THREE.BoxGeometry(6,5,3),nyonMat); nCastle.position.set(16,2.5,-22); scene.add(nCastle);
-      [14,18].forEach(xp=>{
-        const nt=new THREE.Mesh(new THREE.CylinderGeometry(0.9,0.9,4,8),nyonMat.clone()); nt.position.set(xp,4,-21); scene.add(nt);
-        const nc=new THREE.Mesh(new THREE.ConeGeometry(1.1,2,8),new THREE.MeshPhysicalMaterial({color:0x8b0000,roughness:0.8}));
-        nc.position.set(xp,6,-21); scene.add(nc);
-      });
-      addLake(scene, 0x1a3a5a, -38);
-      break;
-    }
-
-    // ── STREET PARADE ZURICH — Skyline Zurich, lac, Love Mobile ──
-    case 'streetparade': {
-      addLake(scene, 0x0a1f3a, -30);
-      // Skyline Zurich
-      const bColors=[0x0d0d1a,0x0a0a14,0x111122,0x0e0e1c,0x0c0c18];
-      [[-28,9],[-20,13],[-12,10],[-5,15],[3,12],[10,16],[18,11],[26,10]].forEach(([xp,h],i)=>{
-        const b=new THREE.Mesh(new THREE.BoxGeometry(4,h,2.5),new THREE.MeshPhysicalMaterial({color:bColors[i%5],roughness:0.6,metalness:0.3}));
-        b.position.set(xp,h/2,-24); scene.add(b);
-        for(let wi=0;wi<Math.floor(h/2);wi++){
-          const w=new THREE.Mesh(new THREE.BoxGeometry(0.4,0.3,0.1),new THREE.MeshBasicMaterial({color:Math.random()>0.35?0xffee88:0x111122}));
-          w.position.set(xp+(Math.random()-0.5)*3,wi*2+1,-22.5); scene.add(w);
-        }
-      });
-      // Grossmünster (cathédrale Zurich) — deux tours
-      const gMat=new THREE.MeshPhysicalMaterial({color:0x888877,roughness:0.7});
-      [-3,3].forEach(xp=>{
-        const gt=new THREE.Mesh(new THREE.CylinderGeometry(1,1,12,8),gMat.clone()); gt.position.set(-18+xp,6,-26); scene.add(gt);
-        const gc=new THREE.Mesh(new THREE.ConeGeometry(1.2,4,8),new THREE.MeshPhysicalMaterial({color:0x556644,roughness:0.8}));
-        gc.position.set(-18+xp,13,-26); scene.add(gc);
-      });
-      // Love Mobile — float coloré
-      const lm=new THREE.Mesh(new THREE.BoxGeometry(5,2,2.5),new THREE.MeshPhysicalMaterial({color:0xff00aa,roughness:0.3,metalness:0.4}));
-      lm.position.set(10,1,-10); scene.add(lm);
-      const lmTop=new THREE.Mesh(new THREE.SphereGeometry(1.2,10,10),new THREE.MeshBasicMaterial({color:0xff66cc}));
-      lmTop.position.set(10,2.8,-10); scene.add(lmTop);
-      // Confettis
-      for(let i=0;i<200;i++){
-        const cCol=FESTIVAL_NEONS[Math.floor(Math.random()*FESTIVAL_NEONS.length)];
-        const c=new THREE.Mesh(new THREE.BoxGeometry(0.08,0.08,0.02),new THREE.MeshBasicMaterial({color:hexToColor(cCol)}));
-        c.position.set((Math.random()-0.5)*40,Math.random()*15,(Math.random()-0.5)*20+5);
-        c.rotation.set(Math.random()*Math.PI,Math.random()*Math.PI,Math.random()*Math.PI);
-        c.name='confetti_'+i; scene.add(c);
-      }
-      break;
-    }
-
-    // ── FRAUENFELD — Hip-hop, écrans LED, graffitis ──
-    case 'frauenfeld': {
-      [-14,14].forEach(xp=>{
-        const wall=new THREE.Mesh(new THREE.BoxGeometry(0.4,10,14),new THREE.MeshPhysicalMaterial({color:0x1a1a1a,roughness:0.95}));
-        wall.position.set(xp,5,-15); scene.add(wall);
-        for(let gi=0;gi<8;gi++){
-          const gCol=FESTIVAL_NEONS[Math.floor(Math.random()*FESTIVAL_NEONS.length)];
-          const g=new THREE.Mesh(new THREE.BoxGeometry(0.05,1.5+Math.random()*2,2+Math.random()*2),new THREE.MeshBasicMaterial({color:hexToColor(gCol),transparent:true,opacity:0.7}));
-          g.position.set(xp+(xp>0?-0.3:0.3),2+Math.random()*6,-12+Math.random()*6); scene.add(g);
-        }
-      }); break;
-    }
-
-    // ── GURTEN BERNE — Colline verdoyante, ours (symbole de Berne) ──
-    case 'gurten': {
-      const hill=new THREE.Mesh(new THREE.SphereGeometry(22,16,16,0,Math.PI*2,0,Math.PI/2),
-        new THREE.MeshPhysicalMaterial({color:0x1e4010,roughness:0.9}));
-      hill.position.set(0,-10,-30); scene.add(hill);
-      // Arbres sur la colline
-      [[-18,-24],[-8,-26],[5,-25],[15,-24],[22,-22]].forEach(([xp,zp])=>{
-        const h=2+Math.random();
-        const t=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.18,h,6),new THREE.MeshPhysicalMaterial({color:0x5c3317,roughness:0.95}));
-        t.position.set(xp,h/2,zp); scene.add(t);
-        const tc=new THREE.Mesh(new THREE.ConeGeometry(0.9,2,7),new THREE.MeshPhysicalMaterial({color:0x1a4010,roughness:0.9}));
-        tc.position.set(xp,h+0.8,zp); scene.add(tc);
-      });
-      // Ours de Berne stylisé (silhouette)
-      const bearMat=new THREE.MeshPhysicalMaterial({color:0x8b4513,roughness:0.8});
-      const bearBody=new THREE.Mesh(new THREE.SphereGeometry(1.2,8,8),bearMat); bearBody.position.set(-20,1.2,-20); scene.add(bearBody);
-      const bearHead=new THREE.Mesh(new THREE.SphereGeometry(0.8,8,8),bearMat.clone()); bearHead.position.set(-20,2.8,-20); scene.add(bearHead);
-      [[-21.2,2.2],[-18.8,2.2]].forEach(([xp,yp])=>{
-        const ear=new THREE.Mesh(new THREE.SphereGeometry(0.25,6,6),bearMat.clone()); ear.position.set(xp,yp,-20); scene.add(ear);
-      });
-      const bearL=new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.3,1.5,6),bearMat.clone()); bearL.position.set(-21.5,0,-20); scene.add(bearL);
-      const bearR=new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.3,1.5,6),bearMat.clone()); bearR.position.set(-18.5,0,-20); scene.add(bearR);
-      break;
-    }
-
-    // ── SION SOUS LES ÉTOILES — Château Tourbillon, vignes, Alpes ──
-    case 'sion': {
-      // Vignes en rangées
-      for(let row=0;row<4;row++){
-        for(let col=0;col<8;col++){
-          const vp=new THREE.Mesh(new THREE.BoxGeometry(0.06,0.8,0.06),new THREE.MeshPhysicalMaterial({color:0x5c3317,roughness:0.9}));
-          vp.position.set(-14+col*4,0.4,-20-row*2); scene.add(vp);
-          const vt=new THREE.Mesh(new THREE.BoxGeometry(4,0.06,0.06),new THREE.MeshPhysicalMaterial({color:0x8b6914,roughness:0.9}));
-          vt.position.set(-14+col*4,0.8,-20-row*2); scene.add(vt);
-        }
-      }
-      // Château de Tourbillon sur colline
-      const hillS=new THREE.Mesh(new THREE.ConeGeometry(6,5,8),new THREE.MeshPhysicalMaterial({color:0x7a7060,roughness:0.9}));
-      hillS.position.set(16,2.5,-34); scene.add(hillS);
-      const vMat=new THREE.MeshPhysicalMaterial({color:0xd4c4a0,roughness:0.7});
-      const tourbillon=new THREE.Mesh(new THREE.BoxGeometry(4,4,3),vMat); tourbillon.position.set(16,7.5,-34); scene.add(tourbillon);
-      [14,18].forEach(xp=>{
-        const tt=new THREE.Mesh(new THREE.CylinderGeometry(0.7,0.7,3.5,8),vMat.clone()); tt.position.set(xp,11,-33); scene.add(tt);
-        const tc=new THREE.Mesh(new THREE.ConeGeometry(0.9,2,8),new THREE.MeshPhysicalMaterial({color:0x6a1010,roughness:0.8}));
-        tc.position.set(xp,13,-33); scene.add(tc);
-      });
-      addMountains(scene,[[-30,16],[-18,22],[-5,18],[8,20],[22,17],[32,14]],0x445566);
-      break;
-    }
-
-    // ── FESTINEUCH — Lac Neuchâtel, château ──
-    case 'festineuch': {
-      addLake(scene, 0x0e2a45, -28);
-      // Château de Neuchâtel
-      const nMat=new THREE.MeshPhysicalMaterial({color:0xd4c4a0,roughness:0.7});
-      const nCastle=new THREE.Mesh(new THREE.BoxGeometry(7,5,3.5),nMat); nCastle.position.set(-14,2.5,-30); scene.add(nCastle);
-      [[-17,5],[-11,4]].forEach(([xp,h])=>{
-        const t=new THREE.Mesh(new THREE.CylinderGeometry(0.9,0.9,h,8),nMat.clone()); t.position.set(xp,h/2,-29); scene.add(t);
-        const c=new THREE.Mesh(new THREE.ConeGeometry(1.1,2,8),new THREE.MeshPhysicalMaterial({color:0x556655,roughness:0.8}));
-        c.position.set(xp,h+1,-29); scene.add(c);
-      });
-      addMountains(scene,[[-28,10],[-12,14],[5,11],[20,13]],0x334455);
-      break;
-    }
-
-    // ── LAKELIVE BIENNE — Lac de Bienne, bilingue ──
-    case 'lakelive': {
-      addLake(scene, 0x0a2035, -28);
-      // Île Saint-Pierre (symbole du lac de Bienne)
-      const isle=new THREE.Mesh(new THREE.CylinderGeometry(5,6,0.5,12),new THREE.MeshPhysicalMaterial({color:0x2a4a1a,roughness:0.9}));
-      isle.position.set(12,0.3,-32); scene.add(isle);
-      [9,13,11].forEach((xp,i)=>{
-        const t=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.18,1.5+i*0.5,6),new THREE.MeshPhysicalMaterial({color:0x5c3317,roughness:0.95}));
-        t.position.set(xp,1,-31+i); scene.add(t);
-        const tc=new THREE.Mesh(new THREE.SphereGeometry(0.8,6,6),new THREE.MeshPhysicalMaterial({color:0x1f4010,roughness:0.9}));
-        tc.position.set(xp,2.5+i*0.3,-31+i); scene.add(tc);
-      });
-      addMountains(scene,[[-28,10],[-14,13],[0,11],[16,12]],0x334455);
-      break;
-    }
-
-    // ── VENOGE — Rivière, forêt, nature ──
-    case 'venoge': {
-      // Rivière Venoge
-      const river=new THREE.Mesh(new THREE.PlaneGeometry(8,40),new THREE.MeshPhysicalMaterial({color:0x1a3a5a,roughness:0.0,metalness:0.1,transmission:0.6}));
-      river.rotation.x=-Math.PI/2; river.position.set(-10,0.05,-20); scene.add(river);
-      // Forêt dense
-      [[-28,-18],[-22,-22],[-16,-20],[-8,-24],[0,-22],[8,-20],[16,-24],[24,-20],[30,-18]].forEach(([xp,zp])=>{
-        const h=3+Math.random()*2;
-        const t=new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.22,h,6),new THREE.MeshPhysicalMaterial({color:0x5c3317,roughness:0.95}));
-        t.position.set(xp,h/2,zp); scene.add(t);
-        const tc=new THREE.Mesh(new THREE.ConeGeometry(1.2,2.5,7),new THREE.MeshPhysicalMaterial({color:0x1a4010,roughness:0.9}));
-        tc.position.set(xp,h+1,zp); scene.add(tc);
-      });
-      // Prairie verte
-      const meadow=new THREE.Mesh(new THREE.PlaneGeometry(80,40),new THREE.MeshPhysicalMaterial({color:0x1e4018,roughness:0.95}));
-      meadow.rotation.x=-Math.PI/2; meadow.position.set(0,0.01,-15); scene.add(meadow);
-      break;
-    }
-
-    // ── DEFAULT — montagnes génériques ──
-    default: {
-      addMountains(scene,[[-25,8],[-10,10],[10,9],[25,8]],0x334455);
-      break;
-    }
+// ===== DJ FALLBACK =====
+function addDJSetup(scene, neon, nCol) {
+  const djFill = new THREE.PointLight(nCol, 6, 20);
+  djFill.position.set(0, 8, 2); scene.add(djFill);
+  const djFill2 = new THREE.PointLight(0xffffff, 3, 15);
+  djFill2.position.set(0, 5, 4); scene.add(djFill2);
+  const tableMat = new THREE.MeshStandardMaterial({color:0x223355, emissive:0x112244, emissiveIntensity:0.8, roughness:0.3, metalness:0.8});
+  const table = new THREE.Mesh(new THREE.BoxGeometry(5, 0.2, 1.6), tableMat);
+  table.position.set(0, 3.1, -2.5); scene.add(table);
+  [-1.2, 1.2].forEach(xp => {
+    const deckMat = new THREE.MeshStandardMaterial({color:0x334466, emissive:nCol, emissiveIntensity:0.3, roughness:0.2, metalness:0.9});
+    const deck = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 0.1, 24), deckMat);
+    deck.position.set(xp, 3.22, -2.5); scene.add(deck);
+    const groove = new THREE.Mesh(new THREE.TorusGeometry(0.45, 0.04, 6, 24), new THREE.MeshBasicMaterial({color:nCol}));
+    groove.rotation.x = Math.PI/2; groove.position.set(xp, 3.28, -2.5); scene.add(groove);
+    const pl = new THREE.PointLight(nCol, 3, 5);
+    pl.position.set(xp, 4, -2); scene.add(pl);
+  });
+  const mixerMat = new THREE.MeshStandardMaterial({color:0x112233, emissive:0x001122, emissiveIntensity:0.5, roughness:0.2, metalness:0.9});
+  const mixer = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.18, 1.4), mixerMat);
+  mixer.position.set(0, 3.22, -2.5); scene.add(mixer);
+  const btnColors = [0xff0080, 0x00ffcc, 0xffff00, 0xff6600, 0x8800ff, 0x00aaff];
+  for(let i=0; i<6; i++){
+    const btn = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.08, 8), new THREE.MeshBasicMaterial({color:btnColors[i]}));
+    btn.position.set(-.55+i*0.22, 3.32, -2.5); scene.add(btn);
   }
+  [[-5, 1.5], [5, 1.5]].forEach(([xp, h]) => {
+    const spkMat = new THREE.MeshStandardMaterial({color:0x111122, emissive:0x050510, emissiveIntensity:0.3, roughness:0.8});
+    const spk = new THREE.Mesh(new THREE.BoxGeometry(1.4, h*2, 1.0), spkMat);
+    spk.position.set(xp, h, -3); scene.add(spk);
+    const spkLight = new THREE.PointLight(nCol, 2, 6);
+    spkLight.position.set(xp, h+1, -2); scene.add(spkLight);
+  });
+  const skinCol = new THREE.MeshStandardMaterial({color:0xc8956a, emissive:0x8b6040, emissiveIntensity:0.6, roughness:0.8});
+  const clothMat = new THREE.MeshStandardMaterial({color:0x2244aa, emissive:0x112266, emissiveIntensity:0.5, roughness:0.7});
+  const torso = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.9, 0.3), clothMat);
+  torso.position.set(0, 4.35, -2.8); scene.add(torso);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.32, 12, 12), skinCol);
+  head.position.set(0, 5.1, -2.8); scene.add(head);
+  const hpMat = new THREE.MeshStandardMaterial({color:0x223366, emissive:nCol, emissiveIntensity:0.4, roughness:0.3, metalness:0.8});
+  const headband = new THREE.Mesh(new THREE.TorusGeometry(0.38, 0.06, 8, 20, Math.PI), hpMat);
+  headband.position.set(0, 5.28, -2.8); headband.rotation.x = Math.PI/2; scene.add(headband);
+  [[-.38, 5.1], [.62, 5.1]].forEach(([ex, ey]) => {
+    const ear = new THREE.Mesh(new THREE.SphereGeometry(0.15, 10, 10), hpMat.clone());
+    ear.position.set(ex, ey, -2.8); scene.add(ear);
+  });
+  const armMat = new THREE.MeshStandardMaterial({color:0x2244aa, emissive:0x112255, emissiveIntensity:0.4});
+  [[-.8, -.9, 3.75, -2.6], [.8, .9, 3.75, -2.6]].forEach(([ax, targetX, ay, az]) => {
+    const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.08, 0.9, 8), armMat);
+    arm.position.set((ax+targetX)/2, ay, az);
+    arm.rotation.z = ax < 0 ? 0.6 : -0.6;
+    scene.add(arm);
+  });
+  const haloLight = new THREE.PointLight(nCol, 4, 8);
+  haloLight.position.set(0, 3.5, -2); scene.add(haloLight);
 }
 
 // ===== ACTIVATE ARTIST ON HOVER =====
@@ -818,9 +700,11 @@ export function initThreeScene(neon, genreColors, headliners, fest) {
   const H = canvas.clientHeight || window.innerHeight;
   currentNeon = neon;
 
-  threeRenderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+  particlesRef = null; fogRefs = []; confettiRefs = [];
+  threeRenderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  threeRenderer._isDJFestival = false;
   threeRenderer.setSize(W, H);
-  threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
   threeRenderer.shadowMap.enabled = true;
   threeRenderer.shadowMap.type = THREE.PCFShadowMap;
   threeRenderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -828,12 +712,18 @@ export function initThreeScene(neon, genreColors, headliners, fest) {
   threeRenderer.outputColorSpace = THREE.SRGBColorSpace;
 
   threeScene = new THREE.Scene();
-  threeScene.background = new THREE.Color(0x020205);
+
+  // Toujours nuit
+  const _dayFestivals = [];
+  const _decorId = getFestivalDecorId(fest);
+  const _isDay = false;
+  threeScene.background = null;
   threeScene.fog = new THREE.FogExp2(0x020205, 0.008);
+  applyFestivalBackground(_decorId);
 
   threeCamera = new THREE.PerspectiveCamera(60, W/H, 0.1, 200);
-  threeCamera.position.set(0, 4, 22);
-  threeCamera.lookAt(0, 5, 0);
+  threeCamera.position.set(-3, 4, 22);
+  threeCamera.lookAt(-3, 5, 0);
 
   const [nr,ng,nb] = hexToRgb(neon);
   const nCol = new THREE.Color(nr,ng,nb);
@@ -856,7 +746,8 @@ export function initThreeScene(neon, genreColors, headliners, fest) {
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(100,80), floorMat);
   floor.rotation.x=-Math.PI/2; floor.receiveShadow=true; threeScene.add(floor);
 
-  addFestivalDecor(getFestivalDecorId(fest), neon, threeScene);
+  if (_decorId === 'frauenfeld') addFrauenfeldDecor(threeScene);
+
 
   const stageMat = new THREE.MeshPhysicalMaterial({color:0x0d0d1e,roughness:0.1,metalness:0.6,reflectivity:1.0});
   const stage = new THREE.Mesh(new THREE.BoxGeometry(28,1.2,10), stageMat);
@@ -883,6 +774,37 @@ export function initThreeScene(neon, genreColors, headliners, fest) {
   const bar2=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,26,8),trussMat);
   bar2.rotation.z=Math.PI/2; bar2.position.set(0,10,-8); threeScene.add(bar2);
 
+  // Projecteurs sur le truss — visibles pour Fête de la Musique, subtils pour les autres
+  // Projecteurs sur le truss — toujours présents, couleur néon du festival
+  // Plus visibles pour Fête de la Musique
+  const isFeteMusique = _decorId === 'fetedelamusique';
+  const trussSpotColors = isFeteMusique
+    ? [0xffaa00, 0xff4488, 0x00ccff, 0xffee00, 0x44ffaa]
+    : [nCol, nCol, nCol, nCol, nCol];
+  const trussIntensity = isFeteMusique ? 6 : 1.5;
+  const bulbSize = isFeteMusique ? 0.3 : 0.15;
+  [-10,-5,0,5,10].forEach((xp,i) => {
+    const spot = new THREE.PointLight(trussSpotColors[i], trussIntensity, 25);
+    spot.position.set(xp, 14.5, -7); threeScene.add(spot);
+    // Bulb très visible — sur layer 0 pour déclencher le bloom
+    const bulb = new THREE.Mesh(
+      new THREE.SphereGeometry(bulbSize, 8, 8),
+      new THREE.MeshBasicMaterial({color: trussSpotColors[i], toneMapped: false})
+    );
+    bulb.position.set(xp, 14.0, -7.5);
+    bulb.layers.set(0); // layer 0 = bloom actif
+    threeScene.add(bulb);
+    // Halo bloom autour du bulb
+    const haloSize = isFeteMusique ? 0.6 : 0.3;
+    const halo = new THREE.Mesh(
+      new THREE.SphereGeometry(haloSize, 8, 8),
+      new THREE.MeshBasicMaterial({color: trussSpotColors[i], transparent: true, opacity: isFeteMusique ? 0.5 : 0.2, toneMapped: false})
+    );
+    halo.position.set(xp, 14.0, -7.5);
+    halo.layers.set(0);
+    threeScene.add(halo);
+  });
+
   const screenCol = new THREE.Color(nr*0.2,ng*0.2,nb*0.2);
   const screenMat = new THREE.MeshPhysicalMaterial({
     color:screenCol, emissive:new THREE.Color(nr*0.3,ng*0.3,nb*0.3),
@@ -902,16 +824,18 @@ export function initThreeScene(neon, genreColors, headliners, fest) {
 
   // ── FOULE 3D ──
   crowdMeshes = [];
-  for(let row=0;row<9;row++){
-    for(let col=0;col<20;col++){
+  for(let row=0;row<7;row++){
+    for(let col=0;col<15;col++){
       const x=(col-10)*1.35+(Math.random()-0.5)*0.5;
       const z=4+row*1.5+(Math.random()-0.5)*0.4;
       const scale=Math.max(0.6,1-row*0.035)+Math.random()*0.08;
       const p=createCrowdPerson(scale,x,z);
       p.row=row; threeScene.add(p.group); crowdMeshes.push(p);
-      // Lumières de téléphone dans les premiers rangs
-      if (row < 3 && Math.random() > 0.75) {
-        const phoneLight = new THREE.PointLight(0xaaccff, 0.15, 2.5);
+      // Lumières de téléphone — plus nombreuses et plus lumineuses
+      if (row < 2 && Math.random() > 0.7) {
+        const phoneColors = [0xaaccff, 0xffffff, 0xaaffcc, 0xffaacc, 0xffeeaa];
+        const phoneLight = new THREE.PointLight(
+          phoneColors[Math.floor(Math.random()*phoneColors.length)], 0.6, 3.5);
         phoneLight.position.set(x, 1.8*scale, z);
         threeScene.add(phoneLight);
       }
@@ -934,12 +858,17 @@ export function initThreeScene(neon, genreColors, headliners, fest) {
     const lctx=lc.getContext('2d');
     lctx.fillStyle='#000000'; lctx.fillRect(0,0,1024,96);
     lctx.strokeStyle='#ffffff'; lctx.lineWidth=3; lctx.strokeRect(3,3,1018,90);
-    lctx.fillStyle='#ffffff'; lctx.font='bold 50px Arial';
+    // Texte blanc brillant pour déclencher le bloom
+    lctx.shadowColor = '#ffffff'; lctx.shadowBlur = 30;
+    lctx.fillStyle='#ffffff'; lctx.font='bold 54px Arial';
     lctx.textAlign='center'; lctx.textBaseline='middle';
     lctx.fillText("TÊTES D'AFFICHE",512,48);
+    lctx.shadowBlur = 0;
     const labelSprite=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(lc),transparent:false,depthWrite:false}));
     labelSprite.scale.set(22,2.0,1);
     labelSprite.position.set(0,12,-7.5);
+    labelSprite.name = 'tetes_affiche_label'; // bloom layer 0
+    labelSprite.layers.set(0);
     threeScene.add(labelSprite);
 
     hoverSpot = null;
@@ -958,8 +887,13 @@ export function initThreeScene(neon, genreColors, headliners, fest) {
       threeScene.add(backdrop);
       const darkBackMat = backdropMat;
 
-      const artist = createArtist3D(h.name, neon, SCALE);
-      artist.group.position.set(ax, 1.25 + SCALE*2.2, az); // feet on stage
+      // Utilise photo circulaire si disponible, sinon silhouette
+      const artist = ARTIST_PHOTOS[h.name]
+        ? createArtistCircle(h.name, neon, SCALE)
+        : createArtist3D(h.name, neon, SCALE);
+      const isPhoto = !!ARTIST_PHOTOS[h.name];
+      // Photos: centre du cercle à hauteur de scène + rayon ; silhouettes: pieds sur scène
+      artist.group.position.set(ax, isPhoto ? 1.25 + SCALE*2.0 : 1.25 + SCALE*2.2, az);
       artist.group.traverse(c => { c.userData.artistIdx = i; });
       threeScene.add(artist.group);
 
@@ -977,22 +911,36 @@ export function initThreeScene(neon, genreColors, headliners, fest) {
       ctx.clearRect(0, 0, 512, 100);
       // Taille de police adaptative selon la longueur du nom
       const nameUp = h.name.toUpperCase();
-      let fontSize = 54;
+      let fontSize = 60;
       ctx.font = `bold ${fontSize}px monospace`;
-      while (ctx.measureText(nameUp).width > 490 && fontSize > 22) {
+      while (ctx.measureText(nameUp).width > 490 && fontSize > 24) {
         fontSize -= 2;
         ctx.font = `bold ${fontSize}px monospace`;
       }
-      ctx.fillStyle = 'rgba(180,180,180,0.85)';
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(nameUp, 256, 50);
-      const tex = new THREE.CanvasTexture(c2d);
-      const nameSprite = new THREE.Sprite(new THREE.SpriteMaterial({
+      // Fond pill centré exactement autour du texte
+      const textW = ctx.measureText(nameUp).width;
+      const pillW = textW + 28;
+      const pillH = fontSize + 12;
+      const pillX = (512 - pillW) / 2;
+      const pillY = (100 - pillH) / 2;  // centrage vertical parfait
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.beginPath();
+      ctx.roundRect(pillX, pillY, pillW, pillH, pillH / 2);
+      ctx.fill();
+      // Texte au centre exact du canvas
+      ctx.fillStyle = 'rgba(200,196,188,0.9)';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(nameUp, 256, 100 / 2);
+      const tex = new THREE.CanvasTexture(c2d);      const nameSprite = new THREE.Sprite(new THREE.SpriteMaterial({
         map: tex, transparent: true, opacity: 0.0, depthWrite: false,
       }));
-      nameSprite.scale.set(5.5, 1.1, 1);
-      nameSprite.position.set(ax, 1.25 + SCALE*4.4 + 1.0, az + 1.5);
+      nameSprite.scale.set(7.5, 1.5, 1);
+      // Name shown on hover for both photos and silhouettes
+      const namePosY = isPhoto ? 1.25 + SCALE*5.0 : 1.25 + SCALE*4.4 + 1.0;
+      nameSprite.position.set(ax, namePosY, az + 1.5);
       nameSprite.name = 'artist_label_' + i;
+      nameSprite.layers.set(NO_BLOOM_LAYER); // pas de bloom sur les noms
       threeScene.add(nameSprite);
 
       artistItems.push({ group:artist.group, mat:artist.mat, backdropMat:darkBackMat, backdropPlane:backdrop, halo, nameSprite, ax, az, floorLight });
@@ -1064,6 +1012,10 @@ export function initThreeScene(neon, genreColors, headliners, fest) {
         });
       });
     }
+  } else {
+    // ── Pas de têtes d'affiche → DJ setup ──
+    addDJSetup(threeScene, neon, nCol);
+    threeRenderer._isDJFestival = true;
   }
 
   // ── FAISCEAUX LASER ──
@@ -1085,7 +1037,7 @@ export function initThreeScene(neon, genreColors, headliners, fest) {
   }
 
   // ── PARTICULES ──
-  const partCount=250;
+  const partCount=120;
   const partGeo=new THREE.BufferGeometry();
   const positions=new Float32Array(partCount*3);
   const partColors=new Float32Array(partCount*3);
@@ -1100,19 +1052,24 @@ export function initThreeScene(neon, genreColors, headliners, fest) {
   partGeo.setAttribute('color',new THREE.BufferAttribute(partColors,3));
   const particles=new THREE.Points(partGeo,new THREE.PointsMaterial({size:0.12,vertexColors:true,transparent:true,opacity:0.8,sizeAttenuation:true}));
   particles.name='particles'; threeScene.add(particles);
+  particlesRef = particles;
 
   // ── BRUME ──
   for(let i=0;i<6;i++){
     const fm=new THREE.Mesh(new THREE.SphereGeometry(2.5+Math.random()*2,8,8),
       new THREE.MeshBasicMaterial({color:0x9999bb,transparent:true,opacity:0.03+Math.random()*0.02,depthWrite:false}));
     fm.position.set((Math.random()-0.5)*22,1+Math.random()*3,-5+Math.random()*10);
-    fm.name='fog_'+i; threeScene.add(fm);
+    fm.name='fog_'+i; threeScene.add(fm); fogRefs.push(fm);
   }
 
-  // ── BLOOM — réduit pour éviter le néon sur les sprites ──
+  // ── BLOOM simple — fort sur les néons/lasers ──
+  // Les photos résistent au bloom via toneMapped:false + threshold élevé
+  threeCamera.layers.enableAll();
   composer=new EffectComposer(threeRenderer);
   composer.addPass(new RenderPass(threeScene,threeCamera));
-  const bloomPass=new UnrealBloomPass(new THREE.Vector2(W,H), 0.45, 0.4, 0.5);
+  // threshold=0.7 : seuls les objets très lumineux (néons, lasers) blooment
+  // Les photos sombres (darkening overlay) passent sous le seuil
+  const bloomPass=new UnrealBloomPass(new THREE.Vector2(W/2,H/2), 0.6, 0.4, 0.75);
   composer.addPass(bloomPass);
   composer.addPass(new OutputPass());
 
@@ -1127,6 +1084,7 @@ function onThreeResize() {
   threeCamera.aspect=W/H; threeCamera.updateProjectionMatrix();
   threeRenderer.setSize(W,H);
   if(composer) composer.setSize(W,H);
+
 }
 
 // ===== ANIMATION =====
@@ -1154,25 +1112,22 @@ export function startThreeAnimation(neon) {
       lb.pointLight.intensity=0.8+beat*2.0;
     });
 
-    const particles=threeScene.getObjectByName('particles');
-    if(particles){
-      const pos=particles.geometry.attributes.position.array;
-      for(let i=0;i<pos.length;i+=3){pos[i+1]+=0.025+Math.random()*0.02;if(pos[i+1]>18)pos[i+1]=0;}
-      particles.geometry.attributes.position.needsUpdate=true;
+    if(particlesRef){
+      const pos=particlesRef.geometry.attributes.position.array;
+      for(let i=0;i<pos.length;i+=3){pos[i+1]+=0.025;if(pos[i+1]>18)pos[i+1]=0;}
+      particlesRef.geometry.attributes.position.needsUpdate=true;
     }
-
-    for(let i=0;i<6;i++){
-      const fog=threeScene.getObjectByName('fog_'+i);
-      if(fog){fog.position.x+=Math.sin(beatTime*0.2+i)*0.01;fog.material.opacity=(0.03+Math.sin(beatTime*0.3+i)*0.01)*(1+beat*0.15);}
-    }
-
-    for(let i=0;i<150;i++){
-      const c=threeScene.getObjectByName('confetti_'+i);
-      if(c){c.position.y-=0.04;if(c.position.y<0)c.position.y=15;c.rotation.z+=0.05;}
-    }
+    fogRefs.forEach((fog,i)=>{
+      fog.position.x+=Math.sin(beatTime*0.2+i)*0.01;
+      fog.material.opacity=(0.03+Math.sin(beatTime*0.3+i)*0.01)*(1+beat*0.15);
+    });
+    confettiRefs.forEach(c=>{
+      c.position.y-=0.04;if(c.position.y<0)c.position.y=15;c.rotation.z+=0.05;
+    });
 
     threeCamera.position.y=4+Math.sin(beatTime*0.3)*0.15+beat*0.07;
-    threeCamera.position.x=Math.sin(beatTime*0.15)*0.4;
+    const _baseCamX = threeRenderer._isDJFestival ? 0 : -3;
+    threeCamera.position.x=_baseCamX+Math.sin(beatTime*0.15)*0.4;
 
     if(composer) composer.render();
     else threeRenderer.render(threeScene,threeCamera);
@@ -1186,7 +1141,9 @@ export function destroyThreeScene() {
   if(hoverMouseHandler){window.removeEventListener('mousemove',hoverMouseHandler);hoverMouseHandler=null;}
   if(composer){composer.dispose();composer=null;}
   if(threeRenderer){threeRenderer.dispose();threeRenderer=null;}
+  clearFestivalBackground();
   threeScene=null;threeCamera=null;crowdMeshes=[];lightBeams=[];
+  particlesRef=null;fogRefs=[];confettiRefs=[];
   artistItems=[];hoverSpot=null;hoverRaycaster=null;hoverActiveIdx=-1;
   window.removeEventListener('resize',onThreeResize);
 }

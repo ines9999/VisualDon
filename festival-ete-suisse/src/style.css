@@ -55,7 +55,7 @@ body {
   letter-spacing: 0.3em;
   color: var(--text-muted);
   text-transform: uppercase;
-  margin-bottom: 1.5rem;
+  margin-bottom: 2.8rem;
 }
 
 .intro-title {
@@ -524,6 +524,16 @@ body {
   width: 100% !important;
   height: 100% !important;
   display: block;
+}
+
+/* Décors 2D SVG — fond derrière la scène Three.js */
+#decor-2d {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
 }
 
 .overlay-info {

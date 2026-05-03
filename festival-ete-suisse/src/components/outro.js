@@ -39,3 +39,9 @@ export function updateOutroStats() {
       "<p class=\"outro-text-sub neon-text\">L'été suisse ne fait que commencer.</p>";
   }
 }
+export function hideOutro() {
+  const outro = document.getElementById('outro');
+  if (!outro) return;
+  gsap.to(outro, { opacity: 0, duration: 0.4, ease: 'power2.in',
+    onComplete: () => outro.classList.remove('visible') });
+}

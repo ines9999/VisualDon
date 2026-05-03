@@ -1,15 +1,25 @@
 import { FESTIVAL_NEONS, state } from './config.js';
-import { revealUpTo, droneFlyTo, flyToOverview, revealSecondaryFestivals, revealAllFestivalMarkers } from './map.js';
+import { revealUpTo, droneFlyTo, flyToOverview, revealSecondaryFestivals, revealAllFestivalMarkers, hideSecondaryFestivals } from './map.js';
 import { updateProgress, buildNavDots } from './progressbar.js';
 import { showPanel, hidePanel, updatePanelContent } from './festivalscard.js';
 import { showFestivalOverlay, hideFestivalOverlay } from './charts.js';
-import { showOutro } from './outro.js';
+import { showOutro, hideOutro } from './outro.js';
 
 export function goToFestival(index) {
-  if (state.isAnimating || !state.mapReady) return;
+  // Force reset — ne jamais bloquer la navigation
+  state.isAnimating = false;
+  if (!state.mapReady) return;
   state.isAnimating = true;
+  // Désactiver l'interactivité (active seulement sur la carte finale)
+  try {
+    state.map.scrollZoom.disable();
+    state.map.dragPan.disable();
+    state.map.dragRotate.disable();
+    state.map.doubleClickZoom.disable();
+  } catch(e) {}
 
   const fest = state.festivals[index];
+  if (!fest) { state.isAnimating = false; return; }
   const neon = FESTIVAL_NEONS[index] || '#e8ff47';
 
   const arrive = () => {
@@ -21,6 +31,11 @@ export function goToFestival(index) {
     showFestivalOverlay(fest, index, neon);
     state.isAnimating = false;
   };
+
+  // Fermer l'outro si visible + reset état final
+  hideOutro();
+  state.awaitingFinalScroll = false;
+  hideSecondaryFestivals(); // cacher les points blancs
 
   if (state.festivalOverlayVisible) {
     hideFestivalOverlay(() => {
@@ -56,11 +71,10 @@ export function goToFinalOverview() {
     hidePanel();
     state.currentIndex = state.festivals.length;
 
-    // Cacher le trail (traitillés)
+    // Cacher le trail (pointillés) — les layers s'appellent trail-line et trail-glow
     try {
-      if (state.map.getLayer('festivals-trail')) {
-        state.map.setPaintProperty('festivals-trail', 'line-opacity', 0);
-      }
+      if (state.map.getLayer('trail-line')) state.map.setPaintProperty('trail-line', 'line-opacity', 0);
+      if (state.map.getLayer('trail-glow')) state.map.setPaintProperty('trail-glow', 'line-opacity', 0);
     } catch(e) {}
 
     // Révéler tous les points secondaires
@@ -81,6 +95,14 @@ export function goToFinalOverview() {
     setTimeout(() => {
       state.isAnimating = false;
       state.awaitingFinalScroll = true;
+      // Activer toute l'interactivité sur la carte finale
+      // scrollZoom around cursor = zoom comme Google Maps
+      state.map.scrollZoom.enable();
+      state.map.scrollZoom.setWheelZoomRate(1/450); // sensibilité Google Maps
+      state.map.dragPan.enable();
+      state.map.dragRotate.enable();
+      state.map.touchZoomRotate.enable();
+      state.map.doubleClickZoom.enable();
     }, 2800);
   };
 
@@ -89,6 +111,21 @@ export function goToFinalOverview() {
 }
 
 export function initEvents(startJourney) {
+  // Écouter les clics depuis la carte (map.js → event global)
+  window.addEventListener('navigate-festival', (e) => {
+    const idx = e.detail.index;
+    state.isAnimating = false;
+    state.awaitingFinalScroll = false;
+    // Désactiver zoom interactif avant de naviguer
+    try {
+      state.map.scrollZoom.disable();
+      state.map.dragPan.disable();
+      state.map.dragRotate.disable();
+      state.map.doubleClickZoom.disable();
+    } catch(e2) {}
+    goToFestival(idx);
+  });
+
   document.getElementById('startBtn').addEventListener('click', startJourney);
 
   // Scroll sur l'intro = démarrer le voyage
@@ -107,7 +144,7 @@ export function initEvents(startJourney) {
     introScrolled = true;
     startJourney();
     showNavBar();
-  }, { passive: true });
+  }, { passive: false });
 
   // Touch swipe vers le haut sur mobile
   let touchStartY = 0;
@@ -142,10 +179,17 @@ export function initEvents(startJourney) {
     const mapContainer = document.getElementById('map-container');
     if (!mapContainer.classList.contains('active')) return;
 
-    // Priorité absolue — scroll final vers la conclusion
-    if (state.awaitingFinalScroll && e.deltaY > 0) {
-      state.awaitingFinalScroll = false;
-      showOutro();
+    // En vue finale (outro) — Mapbox gère le zoom
+    // Mais si on dézoome jusqu'au minimum, le scroll vers le bas → page suivante
+    if (state.awaitingFinalScroll) {
+      const atMinZoom = state.map.getZoom() <= state.map.getMinZoom() + 0.1;
+      if (e.deltaY > 0 && atMinZoom) {
+        // Dézoom impossible → déclencher la page de conclusion
+        state.awaitingFinalScroll = false;
+        showOutro();
+        return;
+      }
+      e.stopPropagation();
       return;
     }
 

@@ -60,5 +60,9 @@ export function initPanelToggle() {
 
   btn.addEventListener('click', () => {
     panel.classList.toggle('collapsed');
+    // Ré-applique le décalage caméra après la transition CSS (0.3s)
+    setTimeout(() => {
+      window.dispatchEvent(new Event('resize'));
+    }, 350);
   });
 }

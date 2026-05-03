@@ -705,8 +705,7 @@ export function initThreeScene(neon, genreColors, headliners, fest) {
   threeRenderer._isDJFestival = false;
   threeRenderer.setSize(W, H);
   threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-  threeRenderer.shadowMap.enabled = true;
-  threeRenderer.shadowMap.type = THREE.PCFShadowMap;
+  threeRenderer.shadowMap.enabled = false;
   threeRenderer.toneMapping = THREE.ACESFilmicToneMapping;
   threeRenderer.toneMappingExposure = 0.65;
   threeRenderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -733,8 +732,8 @@ export function initThreeScene(neon, genreColors, headliners, fest) {
 
   const dirLight = new THREE.DirectionalLight(0x112244, 0.04);
   dirLight.name = 'dirLight';
-  dirLight.position.set(5,20,10); dirLight.castShadow=true;
-  dirLight.shadow.mapSize.width=2048; dirLight.shadow.mapSize.height=2048;
+  dirLight.position.set(5,20,10);
+  dirLight.shadow.mapSize.width=512; dirLight.shadow.mapSize.height=512;
   dirLight.shadow.bias=-0.001; threeScene.add(dirLight);
 
   const fillLight = new THREE.PointLight(nCol, 1.2, 40);
@@ -744,14 +743,14 @@ export function initThreeScene(neon, genreColors, headliners, fest) {
     color: 0x050510, roughness: 0.15, metalness: 0.8, reflectivity: 1.0,
   });
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(100,80), floorMat);
-  floor.rotation.x=-Math.PI/2; floor.receiveShadow=true; threeScene.add(floor);
+  floor.rotation.x=-Math.PI/2; threeScene.add(floor);
 
   if (_decorId === 'frauenfeld') addFrauenfeldDecor(threeScene);
 
 
   const stageMat = new THREE.MeshPhysicalMaterial({color:0x0d0d1e,roughness:0.1,metalness:0.6,reflectivity:1.0});
   const stage = new THREE.Mesh(new THREE.BoxGeometry(28,1.2,10), stageMat);
-  stage.position.set(0,0.6,-8); stage.receiveShadow=true; stage.castShadow=true; threeScene.add(stage);
+  stage.position.set(0,0.6,-8); threeScene.add(stage);
 
   const edge = new THREE.Mesh(new THREE.BoxGeometry(28,0.08,0.2), new THREE.MeshBasicMaterial({color:nCol}));
   edge.position.set(0,1.25,-3.2); threeScene.add(edge);
@@ -762,7 +761,7 @@ export function initThreeScene(neon, genreColors, headliners, fest) {
   const trussMat = new THREE.MeshPhysicalMaterial({color:0x888899,roughness:0.2,metalness:0.9});
   [-12,12].forEach(xp=>{
     const col=new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.15,14,8),trussMat);
-    col.position.set(xp,7,-8); col.castShadow=true; threeScene.add(col);
+    col.position.set(xp,7,-8); threeScene.add(col);
     for(let yi=0;yi<5;yi++){
       const d=new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.06,2.2,6),trussMat.clone());
       d.position.set(xp+(yi%2===0?0.4:-0.4),2+yi*2.5,-8);
@@ -819,7 +818,7 @@ export function initThreeScene(neon, genreColors, headliners, fest) {
 
   const stageLight=new THREE.SpotLight(nCol,2.5,45,Math.PI/5,0.5,1);
   stageLight.position.set(0,14,-8); stageLight.target.position.set(0,0,-5);
-  stageLight.castShadow=true; stageLight.shadow.mapSize.width=1024; stageLight.shadow.mapSize.height=1024;
+  stageLight.shadow.mapSize.width=1024; stageLight.shadow.mapSize.height=1024;
   threeScene.add(stageLight); threeScene.add(stageLight.target);
 
   // ── FOULE 3D ──
@@ -917,21 +916,28 @@ export function initThreeScene(neon, genreColors, headliners, fest) {
         fontSize -= 2;
         ctx.font = `bold ${fontSize}px monospace`;
       }
-      // Fond pill centré exactement autour du texte
-      const textW = ctx.measureText(nameUp).width;
-      const pillW = textW + 28;
-      const pillH = fontSize + 12;
+      // Mesure précise avec les métriques réelles de la police
+      const metrics = ctx.measureText(nameUp);
+      const textW = metrics.width;
+      const ascent = metrics.actualBoundingBoxAscent || fontSize * 0.72;
+      const descent = metrics.actualBoundingBoxDescent || fontSize * 0.18;
+      const textH = ascent + descent;
+      const padH = 10, padW = 20;
+      const pillW = textW + padW * 2;
+      const pillH = textH + padH * 2;
       const pillX = (512 - pillW) / 2;
-      const pillY = (100 - pillH) / 2;  // centrage vertical parfait
+      const pillY = (100 - pillH) / 2;
+      // Fond pill
       ctx.fillStyle = 'rgba(0,0,0,0.55)';
       ctx.beginPath();
       ctx.roundRect(pillX, pillY, pillW, pillH, pillH / 2);
       ctx.fill();
-      // Texte au centre exact du canvas
+      // Texte centré sur la pill — baseline alignée au centre visuel exact
       ctx.fillStyle = 'rgba(200,196,188,0.9)';
       ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(nameUp, 256, 100 / 2);
+      ctx.textBaseline = 'alphabetic';
+      const textY = pillY + padH + ascent;
+      ctx.fillText(nameUp, 256, textY);
       const tex = new THREE.CanvasTexture(c2d);      const nameSprite = new THREE.Sprite(new THREE.SpriteMaterial({
         map: tex, transparent: true, opacity: 0.0, depthWrite: false,
       }));
@@ -1154,8 +1160,13 @@ export function showFestivalOverlay(fest, index, neon) {
   overlay.style.setProperty('--neon',neon);
   destroyThreeScene();
   const genreColors=getGenreColors(fest,neon);
-  initThreeScene(neon,genreColors,fest.headliners||[],fest);
-  startThreeAnimation(neon);
+  // Différer la création Three.js d'une frame pour ne pas bloquer Mapbox
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      initThreeScene(neon,genreColors,fest.headliners||[],fest);
+      startThreeAnimation(neon);
+    });
+  });
   document.getElementById('overlay-info').innerHTML=`
     <div class="overlay-badge" style="border-color:${neon}; color:${neon}">
       ${fest.city.toUpperCase()} &nbsp;·&nbsp; ${formatDate(fest.date_start)}
